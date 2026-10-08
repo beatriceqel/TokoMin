@@ -5,7 +5,7 @@
 <style>
     .history-page {
         min-height: calc(100vh - 70px);
-        background: #f4f6f9;
+        background: #f5f7f8;
         padding: 35px 25px 50px;
     }
 
@@ -40,7 +40,7 @@
         align-items: center;
         gap: 8px;
         padding: 12px 18px;
-        background: #2563eb;
+        background: #13825d;
         color: white;
         text-decoration: none;
         border-radius: 10px;
@@ -51,7 +51,7 @@
     }
 
     .btn-new-transaction:hover {
-        background: #1d4ed8;
+        background: #0d704f;
         transform: translateY(-1px);
     }
 
@@ -140,7 +140,7 @@
 
     .invoice-number {
         font-weight: 700;
-        color: #1d4ed8;
+        color: #16815b;
     }
 
     .cashier-name {
@@ -159,8 +159,8 @@
         align-items: center;
         padding: 5px 10px;
         border-radius: 999px;
-        background: #eff6ff;
-        color: #1d4ed8;
+        background: #e9f7ef;
+        color: #16815b;
         font-size: 12px;
         font-weight: 700;
     }
@@ -219,8 +219,8 @@
     }
 
     .btn-detail {
-        background: #eff6ff;
-        color: #1d4ed8;
+        background: #e9f7ef;
+        color: #16815b;
         border: 1px solid #dbeafe;
     }
 
@@ -248,8 +248,8 @@
         height: 65px;
         margin: 0 auto 18px;
         border-radius: 50%;
-        background: #eff6ff;
-        color: #2563eb;
+        background: #e9f7ef;
+        color: #16815b;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -318,7 +318,7 @@
                 </h1>
 
                 <p class="history-subtitle">
-                    Daftar transaksi penjualan TokoLokal yang telah dilakukan.
+                    Daftar transaksi penjualan TokoMini yang telah dilakukan.
                 </p>
             </div>
 

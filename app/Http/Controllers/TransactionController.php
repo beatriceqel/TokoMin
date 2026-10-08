@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Category;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,10 +36,11 @@ class TransactionController extends Controller
             ->where('stock', '>', 0)
             ->orderBy('name')
             ->get();
+        $categories = Category::orderBy('name')->get();
 
         return view(
             'kasir.transaction',
-            compact('products')
+            compact('products', 'categories')
         );
     }
 
@@ -458,21 +460,16 @@ class TransactionController extends Controller
             'user',
             'details.product',
         ]);
-
-
         /*
         |--------------------------------------------------------------------------
         | TAMPILKAN HALAMAN DETAIL
         |--------------------------------------------------------------------------
         */
-
         return view(
             'transactions.show',
             compact('transaction')
         );
     }
-
-
     /**
      * Menampilkan struk transaksi.
      */
@@ -488,14 +485,11 @@ class TransactionController extends Controller
             'user',
             'details.product',
         ]);
-
-
         /*
         |--------------------------------------------------------------------------
         | TAMPILKAN STRUK
         |--------------------------------------------------------------------------
         */
-
         return view(
             'kasir.receipt',
             compact('transaction')

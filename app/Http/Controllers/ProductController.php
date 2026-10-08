@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Category;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -12,9 +13,14 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::latest()->paginate(10);
+        $categories = Category::orderBy('name')->get();
+        $selectedCategory = request('category');
+        $products = Product::when(
+            $selectedCategory !== null && $selectedCategory !== '',
+            fn ($query) => $query->where('category', $selectedCategory)
+        )->latest()->paginate(10)->withQueryString();
 
-        return view('products.index', compact('products'));
+        return view('products.index', compact('products', 'categories'));
     }
 
     /**
@@ -22,7 +28,9 @@ class ProductController extends Controller
      */
     public function create()
     {
-        return view('products.create');
+        $categories = Category::orderBy('name')->get();
+
+        return view('products.create', compact('categories'));
     }
 
     /**
@@ -32,7 +40,7 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'nullable|string|max:100',
+            'category' => 'required|string|exists:categories,name',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
@@ -62,7 +70,9 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        return view('products.edit', compact('product'));
+        $categories = Category::orderBy('name')->get();
+
+        return view('products.edit', compact('product', 'categories'));
     }
 
     /**
@@ -72,7 +82,7 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'nullable|string|max:100',
+            'category' => 'required|string|exists:categories,name',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',

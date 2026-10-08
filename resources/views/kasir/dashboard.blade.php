@@ -5,7 +5,7 @@
 <style>
     .kasir-dashboard {
         min-height: calc(100vh - 70px);
-        background: #f4f6f9;
+        background: #f5f7f8;
         padding: 35px 25px 50px;
     }
 
@@ -80,7 +80,7 @@
         right: -35px;
         top: -35px;
         border-radius: 50%;
-        background: #eff6ff;
+        background: #e9f7ef;
     }
 
     .stat-icon {
@@ -90,8 +90,8 @@
         align-items: center;
         justify-content: center;
         border-radius: 11px;
-        background: #eff6ff;
-        color: #2563eb;
+        background: #e9f7ef;
+        color: #16815b;
         font-size: 18px;
         font-weight: 800;
         margin-bottom: 17px;
@@ -170,8 +170,8 @@
         align-items: center;
         justify-content: center;
         border-radius: 11px;
-        background: #eff6ff;
-        color: #2563eb;
+        background: #e9f7ef;
+        color: #16815b;
         font-size: 16px;
         font-weight: 800;
     }
@@ -260,7 +260,7 @@
 
     .transaction-number {
         margin: 0;
-        color: #1d4ed8;
+        color: #16815b;
         font-size: 13px;
         font-weight: 700;
     }
@@ -305,7 +305,7 @@
         display: block;
         padding: 14px 22px;
         border-top: 1px solid #e5e7eb;
-        color: #2563eb;
+        color: #16815b;
         text-decoration: none;
         font-size: 13px;
         font-weight: 700;

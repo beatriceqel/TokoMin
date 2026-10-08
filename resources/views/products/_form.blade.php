@@ -1,41 +1,48 @@
-<div class="mb-3">
-    <label class="form-label">Nama Product</label>
-    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $product->name ?? '') }}">
-    @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
+<div class="workspace-form-grid">
+    <label class="workspace-field">
+        <span>Nama produk</span>
+        <input name="name" value="{{ old('name', $product->name ?? '') }}" maxlength="255" required placeholder="Contoh: Kaos polos">
+        @error('name')<small class="workspace-field-error">{{ $message }}</small>@enderror
+    </label>
+
+    <label class="workspace-field">
+        <span>Kategori</span>
+        <select name="category" required>
+            <option value="">Pilih kategori</option>
+            @foreach($categories as $category)
+                <option value="{{ $category->name }}" @selected(old('category', $product->category ?? '') === $category->name)>{{ $category->name }}</option>
+            @endforeach
+        </select>
+        @error('category')<small class="workspace-field-error">{{ $message }}</small>@enderror
+        <small class="workspace-helper">Kategori belum tersedia? <a href="{{ route('categories.index') }}">Kelola kategori</a>.</small>
+    </label>
+
+    <label class="workspace-field workspace-field-full">
+        <span>Deskripsi <small>(opsional)</small></span>
+        <textarea name="description" rows="4" placeholder="Informasi tambahan tentang produk">{{ old('description', $product->description ?? '') }}</textarea>
+        @error('description')<small class="workspace-field-error">{{ $message }}</small>@enderror
+    </label>
+
+    <label class="workspace-field">
+        <span>Harga (Rp)</span>
+        <input name="price" type="number" min="0" step="1" value="{{ old('price', $product->price ?? '') }}" required>
+        @error('price')<small class="workspace-field-error">{{ $message }}</small>@enderror
+    </label>
+
+    <label class="workspace-field">
+        <span>Stok</span>
+        <input name="stock" type="number" min="0" step="1" value="{{ old('stock', $product->stock ?? 0) }}" required>
+        @error('stock')<small class="workspace-field-error">{{ $message }}</small>@enderror
+    </label>
+
+    <label class="workspace-field workspace-field-full">
+        <span>Nama file gambar <small>(opsional)</small></span>
+        <input name="image" value="{{ old('image', $product->image ?? '') }}" maxlength="255" placeholder="Contoh: produk.jpg">
+        @error('image')<small class="workspace-field-error">{{ $message }}</small>@enderror
+    </label>
 </div>
 
-<div class="mb-3">
-    <label class="form-label">Kategori</label>
-    <input type="text" name="category" class="form-control" value="{{ old('category', $product->category ?? '') }}">
-</div>
-
-<div class="mb-3">
-    <label class="form-label">Deskripsi</label>
-    <textarea name="description" class="form-control" rows="4">{{ old('description', $product->description ?? '') }}</textarea>
-</div>
-
-<div class="row">
-    <div class="col-md-6">
-        <div class="mb-3">
-            <label class="form-label">Harga</label>
-            <input type="number" name="price" class="form-control @error('price') is-invalid @enderror" value="{{ old('price', $product->price ?? '') }}">
-            @error('price') <div class="invalid-feedback">{{ $message }}</div> @enderror
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="mb-3">
-            <label class="form-label">Stock</label>
-            <input type="number" name="stock" class="form-control" value="{{ old('stock', $product->stock ?? 0) }}">
-        </div>
-    </div>
-</div>
-
-<div class="mb-3">
-    <label class="form-label">Image (URL/Nama File)</label>
-    <input type="text" name="image" class="form-control" value="{{ old('image', $product->image ?? '') }}" placeholder="contoh: produk.jpg">
-</div>
-
-<div class="form-check mb-3">
-    <input type="checkbox" name="is_active" value="1" class="form-check-input" id="is_active" {{ old('is_active', $product->is_active ?? true) ? 'checked' : '' }}>
-    <label class="form-check-label" for="is_active">Product Aktif</label>
-</div>
+<label class="workspace-checkbox">
+    <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $product->is_active ?? true))>
+    <span><strong>Produk aktif</strong><small>Produk aktif dengan stok tersedia dapat dijual di kasir.</small></span>
+</label>

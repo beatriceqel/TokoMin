@@ -11,16 +11,15 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
 
-                    <a href="{{ auth()->user()
+                    <a class="store-brand" href="{{ auth()->user()
                         ? (auth()->user()->role === 'admin'
                             ? route('admin.dashboard')
                             : route('kasir.dashboard'))
                         : url('/') }}">
-
-                        <x-application-logo
-                            class="block h-9 w-auto fill-current text-gray-800"
-                        />
-
+                        <span class="store-brand-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M4 9.5h16l-1 11H5L4 9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m3 9.5 2-6h14l2 6M9 9.5a3 3 0 0 0 6 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </span>
+                        <span class="store-brand-name">Toko<span>Mini</span><small>Point of sale</small></span>
                     </a>
 
                 </div>
@@ -50,6 +49,13 @@
                                 :active="request()->routeIs('products.*')"
                             >
                                 {{ __('Produk') }}
+                            </x-nav-link>
+
+                            <x-nav-link
+                                :href="route('categories.index')"
+                                :active="request()->routeIs('categories.*')"
+                            >
+                                {{ __('Kategori') }}
                             </x-nav-link>
 
 
@@ -277,6 +283,13 @@
                         :active="request()->routeIs('products.*')"
                     >
                         {{ __('Produk') }}
+                    </x-responsive-nav-link>
+
+                    <x-responsive-nav-link
+                        :href="route('categories.index')"
+                        :active="request()->routeIs('categories.*')"
+                    >
+                        {{ __('Kategori') }}
                     </x-responsive-nav-link>
 
 
