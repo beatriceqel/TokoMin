@@ -9,7 +9,10 @@
 
     <section class="workspace-card workspace-product-detail">
         @if($product->image)
-            <div class="workspace-detail-image"><img src="{{ asset('images/products/' . $product->image) }}" alt="{{ $product->name }}"></div>
+            <!-- Diubah mengarah ke disk public storage -->
+            <div class="workspace-detail-image">
+                <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="max-width: 300px; border-radius: 8px;">
+            </div>
         @endif
         <div class="workspace-detail-grid">
             <div><span>Kategori</span><strong>{{ $product->category ?: 'Tanpa kategori' }}</strong></div>

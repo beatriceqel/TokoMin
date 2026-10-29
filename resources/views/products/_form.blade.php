@@ -36,8 +36,11 @@
     </label>
 
     <label class="workspace-field workspace-field-full">
-        <span>Nama file gambar <small>(opsional)</small></span>
-        <input name="image" value="{{ old('image', $product->image ?? '') }}" maxlength="255" placeholder="Contoh: produk.jpg">
+        <span>Gambar Produk <small>(opsional)</small></span>
+        <input name="image" type="file" accept="image/jpeg,image/png,image/jpg,image/webp">
+        @if(!empty($product->image))
+            <small class="workspace-helper">Gambar saat ini: {{ basename($product->image) }}</small>
+        @endif
         @error('image')<small class="workspace-field-error">{{ $message }}</small>@enderror
     </label>
 </div>

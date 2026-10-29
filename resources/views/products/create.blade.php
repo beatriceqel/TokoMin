@@ -15,7 +15,8 @@
         <div class="workspace-card-heading">
             <div><h2>Informasi produk</h2><p>Nama, kategori, harga, dan stok akan tampil di katalog kasir.</p></div>
         </div>
-        <form action="{{ route('products.store') }}" method="POST" class="workspace-form workspace-product-form">
+        <!-- Tambahkan enctype="multipart/form-data" di bawah ini agar file gambar terkirim -->
+        <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data" class="workspace-form workspace-product-form">
             @csrf
             @include('products._form')
             <div class="workspace-form-actions">

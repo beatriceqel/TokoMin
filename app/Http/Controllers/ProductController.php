@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ProductController extends Controller
 {
@@ -34,7 +37,7 @@ class ProductController extends Controller
     }
 
     /**
-     * Menyimpan product baru.
+     * Menyimpan product baru (Dilengkapi Upload & Manipulasi Gambar).
      */
     public function store(Request $request)
     {
@@ -44,11 +47,38 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
-            'image' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048', // Validasi file gambar maksimal 2MB
             'is_active' => 'nullable|boolean',
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+
+        // Proses Upload & Manipulasi Gambar dengan Intervention Image
+        $file = $request->file('image');
+        if ($file) {
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $ext = strtolower($file->getClientOriginalExtension());
+            $filename = time() . '_' . preg_replace('/[^A-Za-z0-9\-_]/', '', $originalName) . '.' . $ext;
+            $folder = 'products';
+            $path = $folder . '/' . $filename;
+
+            // Inisialisasi Intervention Image v4 sesuai modul
+            $manager = new ImageManager(Driver::class);
+            $image = $manager->decodePath($file->getRealPath())->cover(800, 800);
+
+            // Encode sesuai ekstensi file
+            if ($ext === 'png') {
+                $encoded = $image->encodeUsingFileExtension('png', quality: 90);
+            } else {
+                $encoded = $image->encodeUsingFileExtension('jpg', quality: 85);
+            }
+
+            // Simpan ke disk public
+            Storage::disk('public')->put($path, $encoded->toString());
+
+            // Masukkan path gambar ke array validated
+            $validated['image'] = $path;
+        }
 
         Product::create($validated);
 
@@ -76,7 +106,7 @@ class ProductController extends Controller
     }
 
     /**
-     * Memperbarui product.
+     * Memperbarui product (Dilengkapi Update Gambar).
      */
     public function update(Request $request, Product $product)
     {
@@ -86,11 +116,42 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
-            'image' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'is_active' => 'nullable|boolean',
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+
+        // Proses Ganti Gambar jika ada file baru yang diunggah
+        $file = $request->file('image');
+        if ($file) {
+            // Hapus gambar lama jika ada
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
+            }
+
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $ext = strtolower($file->getClientOriginalExtension());
+            $filename = time() . '_' . preg_replace('/[^A-Za-z0-9\-_]/', '', $originalName) . '.' . $ext;
+            $folder = 'products';
+            $path = $folder . '/' . $filename;
+
+            // Inisialisasi Intervention Image v4 sesuai modul
+            $manager = new ImageManager(Driver::class);
+            $image = $manager->decodePath($file->getRealPath())->cover(800, 800);
+
+            if ($ext === 'png') {
+                $encoded = $image->encodeUsingFileExtension('png', quality: 90);
+            } else {
+                $encoded = $image->encodeUsingFileExtension('jpg', quality: 85);
+            }
+
+            Storage::disk('public')->put($path, $encoded->toString());
+            $validated['image'] = $path;
+        } else {
+            // Pertahankan gambar lama jika tidak ada upload baru
+            unset($validated['image']);
+        }
 
         $product->update($validated);
 
@@ -101,9 +162,6 @@ class ProductController extends Controller
 
     /**
      * Menonaktifkan product.
-     *
-     * Product tidak dihapus dari database karena
-     * mungkin sudah digunakan pada transaction_details.
      */
     public function destroy(Product $product)
     {
@@ -113,9 +171,6 @@ class ProductController extends Controller
 
         return redirect()
             ->route('products.index')
-            ->with(
-                'success',
-                'Product berhasil dinonaktifkan.'
-            );
+            ->with('success', 'Product berhasil dinonaktifkan.');
     }
 }

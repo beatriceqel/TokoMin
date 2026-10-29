@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf; // Library DomPDF untuk export PDF
 
 class TransactionController extends Controller
 {
@@ -445,54 +446,61 @@ class TransactionController extends Controller
      */
     public function show(Transaction $transaction)
     {
-        /*
-        |--------------------------------------------------------------------------
-        | LOAD RELATIONSHIP
-        |--------------------------------------------------------------------------
-        |
-        | user           = kasir yang melakukan transaksi
-        | details        = daftar produk dalam transaksi
-        | details.product = data product asli
-        |
-        */
-
         $transaction->load([
             'user',
             'details.product',
         ]);
-        /*
-        |--------------------------------------------------------------------------
-        | TAMPILKAN HALAMAN DETAIL
-        |--------------------------------------------------------------------------
-        */
+
         return view(
             'transactions.show',
             compact('transaction')
         );
     }
+
     /**
      * Menampilkan struk transaksi.
      */
     public function receipt(Transaction $transaction)
     {
-        /*
-        |--------------------------------------------------------------------------
-        | LOAD RELATIONSHIP
-        |--------------------------------------------------------------------------
-        */
-
         $transaction->load([
             'user',
             'details.product',
         ]);
-        /*
-        |--------------------------------------------------------------------------
-        | TAMPILKAN STRUK
-        |--------------------------------------------------------------------------
-        */
+
         return view(
             'kasir.receipt',
             compact('transaction')
         );
+    }
+
+    /**
+     * Mencetak dan mengunduh invoice PDF (Acara 30).
+     */
+    public function invoice($id)
+    {
+        $transaction = Transaction::with('details.product', 'user')->findOrFail($id);
+        
+        $invoice = new \stdClass();
+        $invoice->id = $transaction->id;
+        $invoice->transaction_number = $transaction->transaction_number ?? '-';
+        $invoice->created_at = $transaction->created_at;
+        $invoice->user = $transaction->user;
+        $invoice->payment_method = $transaction->payment_method;
+        $invoice->subtotal = $transaction->subtotal;
+        $invoice->discount = $transaction->discount;
+        $invoice->tax = $transaction->tax;
+        $invoice->other_fee = $transaction->other_fee;
+        $invoice->paid_amount = $transaction->paid_amount;
+        $invoice->change_amount = $transaction->change_amount;
+        
+        $invoice->items = $transaction->details->map(function ($item) {
+            $item->total = $item->subtotal ?? ($item->price * $item->qty);
+            return $item;
+        });
+        
+        $invoice->total = $transaction->grand_total ?? 0;
+
+        $pdf = Pdf::loadView('invoices.invoice', compact('invoice'));
+        return $pdf->download('invoice_' . $invoice->id . '.pdf');
     }
 }

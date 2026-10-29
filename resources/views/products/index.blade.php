@@ -36,7 +36,19 @@
                 <tbody>
                     @forelse($products as $product)
                         <tr>
-                            <td><strong>{{ $product->name }}</strong>@if($product->description)<small>{{ Str::limit($product->description, 60) }}</small>@endif</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    @if($product->image)
+                                        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                    @else
+                                        <div style="width: 40px; height: 40px; background: #e2e8f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #64748b;">No Img</div>
+                                    @endif
+                                    <div>
+                                        <strong>{{ $product->name }}</strong>
+                                        @if($product->description)<small style="display: block; color: #64748b;">{{ Str::limit($product->description, 60) }}</small>@endif
+                                    </div>
+                                </div>
+                            </td>
                             <td><span class="workspace-tag">{{ $product->category ?: 'Tanpa kategori' }}</span></td>
                             <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
                             <td>{{ $product->stock }}</td>

@@ -15,7 +15,8 @@
         <div class="workspace-card-heading">
             <div><h2>{{ $product->name }}</h2><p>Pastikan stok dan kategori tetap sesuai.</p></div>
         </div>
-        <form action="{{ route('products.update', $product) }}" method="POST" class="workspace-form workspace-product-form">
+        <!-- Tambahkan enctype="multipart/form-data" di bawah ini -->
+        <form action="{{ route('products.update', $product) }}" method="POST" enctype="multipart/form-data" class="workspace-form workspace-product-form">
             @csrf
             @method('PUT')
             @include('products._form')
