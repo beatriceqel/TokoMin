@@ -7,6 +7,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\FileController; 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 
 Route::get('/', function () {
     return view('welcome');
@@ -35,9 +36,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/transactions/{transaction}/receipt', [TransactionController::class, 'receipt'])
             ->name('transactions.receipt');
 
-        // File Upload (Acara 29)
+        // File Upload 
         Route::get('/upload', [FileController::class, 'showForm'])->name('file.form');
         Route::post('/upload', [FileController::class, 'upload'])->name('file.upload');
+
+        // --- RUTE INVOICE PDF (Acara 30) ---
+        Route::get('orders/{id}/invoice', [TransactionController::class, 'invoice'])->name('orders.invoice');
     });
 
     // Route khusus Kasir
@@ -47,8 +51,9 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
-// --- RUTE INVOICE PDF (Sesuai Modul Acara 30) ---
-// Diarahkan ke TransactionController dan menggunakan parameter {id}
-Route::get('orders/{id}/invoice', [TransactionController::class, 'invoice'])->name('orders.invoice');
+// --- RUTE BROADCAST AUTHENTICATION (LARAVEL REVERB) ---
+Broadcast::channel('user.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
 
 require __DIR__ . '/auth.php';

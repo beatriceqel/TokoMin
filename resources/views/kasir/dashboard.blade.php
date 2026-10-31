@@ -377,7 +377,6 @@
     ========================= */
 
     @media (max-width: 900px) {
-
         .stats-grid {
             grid-template-columns: 1fr;
         }
@@ -385,12 +384,10 @@
         .dashboard-grid {
             grid-template-columns: 1fr;
         }
-
     }
 
 
     @media (max-width: 650px) {
-
         .kasir-dashboard {
             padding: 25px 15px 40px;
         }
@@ -415,324 +412,148 @@
         .transaction-item {
             align-items: flex-start;
         }
-
     }
 </style>
 
 
 <div class="kasir-dashboard">
-
     <div class="dashboard-container">
 
         {{-- =========================
-             HEADER
+               HEADER
         ========================== --}}
-
         <div class="dashboard-header">
-
             <div>
-
-                <h1 class="dashboard-title">
-                    Dashboard Kasir
-                </h1>
-
-                <p class="dashboard-subtitle">
-                    Ringkasan aktivitas transaksi penjualan hari ini.
-                </p>
-
+                <h1 class="dashboard-title">Dashboard Kasir</h1>
+                <p class="dashboard-subtitle">Ringkasan aktivitas transaksi penjualan hari ini.</p>
             </div>
-
             <div class="dashboard-date">
                 {{ now()->translatedFormat('l, d F Y') }}
             </div>
-
         </div>
 
-
         {{-- =========================
-             STATISTICS
+               STATISTICS
         ========================== --}}
-
         <div class="stats-grid">
-
             <div class="stat-card">
-
-                <div class="stat-icon">
-                    TRX
-                </div>
-
-                <p class="stat-label">
-                    Transaksi Hari Ini
-                </p>
-
-                <p class="stat-value">
-                    {{ $todayTransactions }}
-                </p>
-
-                <p class="stat-description">
-                    Transaksi selesai
-                </p>
-
+                <div class="stat-icon">TRX</div>
+                <p class="stat-label">Transaksi Hari Ini</p>
+                <p class="stat-value">{{ $todayTransactions }}</p>
+                <p class="stat-description">Transaksi selesai</p>
             </div>
 
-
             <div class="stat-card">
-
-                <div class="stat-icon">
-                    Rp
-                </div>
-
-                <p class="stat-label">
-                    Penjualan Hari Ini
-                </p>
-
-                <p class="stat-value">
-                    Rp {{ number_format((float) $todaySales, 0, ',', '.') }}
-                </p>
-
-                <p class="stat-description">
-                    Total penjualan selesai
-                </p>
-
+                <div class="stat-icon">Rp</div>
+                <p class="stat-label">Penjualan Hari Ini</p>
+                <p class="stat-value">Rp {{ number_format((float) $todaySales, 0, ',', '.') }}</p>
+                <p class="stat-description">Total penjualan selesai</p>
             </div>
 
-
             <div class="stat-card">
-
-                <div class="stat-icon">
-                    PRD
-                </div>
-
-                <p class="stat-label">
-                    Produk Aktif
-                </p>
-
-                <p class="stat-value">
-                    {{ $totalProducts }}
-                </p>
-
-                <p class="stat-description">
-                    Produk tersedia di toko
-                </p>
-
+                <div class="stat-icon">PRD</div>
+                <p class="stat-label">Produk Aktif</p>
+                <p class="stat-value">{{ $totalProducts }}</p>
+                <p class="stat-description">Produk tersedia di toko</p>
             </div>
-
         </div>
 
-
         {{-- =========================
-             AKSI CEPAT
+               AKSI CEPAT
         ========================== --}}
-
-        <h2 class="section-title">
-            Aksi Cepat
-        </h2>
+        <h2 class="section-title">Aksi Cepat</h2>
 
         <div class="quick-grid">
-
-            <a
-                href="{{ route('transactions.create') }}"
-                class="quick-card"
-            >
-
+            <a href="{{ route('transactions.create') }}" class="quick-card">
                 <div class="quick-left">
-
-                    <div class="quick-icon">
-                        +
-                    </div>
-
+                    <div class="quick-icon">+</div>
                     <div>
-
-                        <p class="quick-title">
-                            Transaksi Baru
-                        </p>
-
-                        <p class="quick-description">
-                            Mulai transaksi penjualan baru.
-                        </p>
-
+                        <p class="quick-title">Transaksi Baru</p>
+                        <p class="quick-description">Mulai transaksi penjualan baru.</p>
                     </div>
-
                 </div>
-
-                <div class="quick-arrow">
-                    →
-                </div>
-
+                <div class="quick-arrow">→</div>
             </a>
 
-
-            <a
-                href="{{ route('transactions.index') }}"
-                class="quick-card"
-            >
-
+            <a href="{{ route('transactions.index') }}" class="quick-card">
                 <div class="quick-left">
-
-                    <div class="quick-icon">
-                        TRX
-                    </div>
-
+                    <div class="quick-icon">TRX</div>
                     <div>
-
-                        <p class="quick-title">
-                            Riwayat Transaksi
-                        </p>
-
-                        <p class="quick-description">
-                            Lihat transaksi penjualan sebelumnya.
-                        </p>
-
+                        <p class="quick-title">Riwayat Transaksi</p>
+                        <p class="quick-description">Lihat transaksi penjualan sebelumnya.</p>
                     </div>
-
                 </div>
-
-                <div class="quick-arrow">
-                    →
-                </div>
-
+                <div class="quick-arrow">→</div>
             </a>
-
         </div>
 
-
         {{-- =========================
-             DATA TERBARU
+               DATA TERBARU
         ========================== --}}
-
         <div class="dashboard-grid">
 
             {{-- TRANSAKSI TERBARU --}}
             <div class="dashboard-card">
-
                 <div class="card-header">
-
-                    <h2 class="card-title">
-                        Transaksi Terbaru
-                    </h2>
-
-                    <p class="card-description">
-                        Lima transaksi terakhir yang tercatat.
-                    </p>
-
+                    <h2 class="card-title">Transaksi Terbaru</h2>
+                    <p class="card-description">Lima transaksi terakhir yang tercatat.</p>
                 </div>
 
-
                 <div class="transaction-list">
-
                     @forelse($latestTransactions as $transaction)
-
                         <div class="transaction-item">
-
                             <div class="transaction-left">
-
-                                <p class="transaction-number">
-                                    {{ $transaction->transaction_number }}
-                                </p>
-
-                                <p class="transaction-cashier">
-                                    Kasir:
-                                    {{ $transaction->user->name ?? 'Kasir' }}
-                                </p>
-
+                                <p class="transaction-number">{{ $transaction->transaction_number }}</p>
+                                <p class="transaction-cashier">Kasir: {{ $transaction->user->name ?? 'Kasir' }}</p>
                             </div>
-
-
                             <div class="transaction-right">
-
-                                <p class="transaction-total">
-                                    Rp {{ number_format((float) $transaction->grand_total, 0, ',', '.') }}
-                                </p>
-
-                                <span class="transaction-status">
-                                    {{ ucfirst($transaction->status) }}
-                                </span>
-
+                                <p class="transaction-total">Rp {{ number_format((float) $transaction->grand_total, 0, ',', '.') }}</p>
+                                <span class="transaction-status">{{ ucfirst($transaction->status) }}</span>
                             </div>
-
                         </div>
-
                     @empty
-
                         <div class="transaction-empty">
                             Belum ada transaksi.
                         </div>
-
                     @endforelse
-
                 </div>
 
-
                 @if($latestTransactions->count() > 0)
-
-                    <a
-                        href="{{ route('transactions.index') }}"
-                        class="view-all"
-                    >
+                    <a href="{{ route('transactions.index') }}" class="view-all">
                         Lihat Semua Transaksi
                     </a>
-
                 @endif
-
             </div>
-
 
             {{-- STOK MENIPIS --}}
             <div class="dashboard-card">
-
                 <div class="card-header">
-
-                    <h2 class="card-title">
-                        Stok Menipis
-                    </h2>
-
-                    <p class="card-description">
-                        Produk dengan stok 5 atau kurang.
-                    </p>
-
+                    <h2 class="card-title">Stok Menipis</h2>
+                    <p class="card-description">Produk dengan stok 5 atau kurang.</p>
                 </div>
 
-
                 <div class="stock-list">
-
                     @forelse($lowStockProducts as $product)
-
                         <div class="stock-item">
-
                             <div>
-
-                                <p class="stock-name">
-                                    {{ $product->name }}
-                                </p>
-
-                                <p class="stock-category">
-                                    {{ $product->category ?: 'Tanpa kategori' }}
-                                </p>
-
+                                <p class="stock-name">{{ $product->name }}</p>
+                                <p class="stock-category">{{ $product->category ?: 'Tanpa kategori' }}</p>
                             </div>
-
                             <span class="stock-badge">
                                 {{ $product->stock }}
                             </span>
-
                         </div>
-
                     @empty
-
                         <div class="stock-safe">
                             Semua stok produk masih aman.
                         </div>
-
                     @endforelse
-
                 </div>
-
             </div>
 
         </div>
 
     </div>
-
 </div>
 
 @endsection

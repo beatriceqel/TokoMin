@@ -125,21 +125,31 @@
         }
         .button-area {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             gap: 8px;
             margin-top: 15px;
+        }
+        .button-row {
+            display: flex;
+            gap: 8px;
         }
         .button {
             border: none;
             border-radius: 5px;
-            padding: 8px 14px;
-            font-size: 12px;
+            padding: 8px 10px;
+            font-size: 11px;
             font-weight: 600;
             cursor: pointer;
             text-decoration: none;
+            text-align: center;
+            flex: 1;
         }
         .button-print {
             background: #13825d;
+            color: white;
+        }
+        .button-pdf {
+            background: #059669;
             color: white;
         }
         .button-back {
@@ -148,7 +158,7 @@
             border: 1px solid #d1d5db;
         }
         /* =========================================
-           MODE CETAK (KERTAS THERMAL 58MM)
+            MODE CETAK (KERTAS THERMAL 58MM)
         ========================================= */
         @media print {
             @page {
@@ -281,16 +291,23 @@
             Semoga hari Anda menyenangkan.
         </div>
     </div>
+    
     {{-- BUTTON AREA --}}
     <div class="button-area">
-        <button type="button" class="button button-print" onclick="window.print()">
-            🖨 Cetak Struk
-        </button>
+        <div class="button-row">
+            <button type="button" class="button button-print" onclick="window.print()">
+                🖨 Cetak Struk
+            </button>
+            <a href="{{ route('orders.invoice', $transaction->id) }}" class="button button-pdf" target="_blank">
+                📥 Unduh PDF
+            </a>
+        </div>
         <a href="{{ route('transactions.create') }}" class="button button-back">
             ← Transaksi Baru
         </a>
     </div>
 </div>
+
 <script>
     window.addEventListener('load', function () {
         setTimeout(function () {

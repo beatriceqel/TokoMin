@@ -206,7 +206,8 @@
     }
 
     .btn-detail,
-    .btn-receipt {
+    .btn-receipt,
+    .btn-pdf {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -236,6 +237,16 @@
 
     .btn-receipt:hover {
         background: #e2e8f0;
+    }
+
+    .btn-pdf {
+        background: #059669;
+        color: white;
+        border: 1px solid #047857;
+    }
+
+    .btn-pdf:hover {
+        background: #047857;
     }
 
     .empty-state {
@@ -304,121 +315,59 @@
     }
 </style>
 
-
 <div class="history-page">
-
     <div class="history-container">
 
         {{-- HEADER --}}
         <div class="history-header">
-
             <div>
-                <h1 class="history-title">
-                    Riwayat Transaksi
-                </h1>
-
-                <p class="history-subtitle">
-                    Daftar transaksi penjualan TokoMini yang telah dilakukan.
-                </p>
+                <h1 class="history-title">Riwayat Transaksi</h1>
+                <p class="history-subtitle">Daftar transaksi penjualan TokoMini yang telah dilakukan.</p>
             </div>
-
-            <a
-                href="{{ route('transactions.create') }}"
-                class="btn-new-transaction"
-            >
+            <a href="{{ route('transactions.create') }}" class="btn-new-transaction">
                 <span>+</span>
                 <span>Transaksi Baru</span>
             </a>
-
         </div>
-
 
         {{-- PESAN BERHASIL --}}
         @if(session('success'))
-
             <div class="alert-success">
                 {{ session('success') }}
             </div>
-
         @endif
-
 
         {{-- CARD RIWAYAT --}}
         <div class="history-card">
-
-            {{-- CARD HEADER --}}
             <div class="history-card-header">
-
                 <div>
-                    <h2 class="history-card-title">
-                        Daftar Transaksi
-                    </h2>
-
-                    <p class="history-card-description">
-                        Riwayat transaksi terbaru akan ditampilkan di bawah.
-                    </p>
+                    <h2 class="history-card-title">Daftar Transaksi</h2>
+                    <p class="history-card-description">Riwayat transaksi terbaru akan ditampilkan di bawah.</p>
                 </div>
-
             </div>
-
 
             {{-- TABLE --}}
             <div class="table-wrapper">
-
                 <table class="history-table">
-
                     <thead>
-
                         <tr>
-
-                            <th>
-                                No. Transaksi
-                            </th>
-
-                            <th>
-                                Kasir
-                            </th>
-
-                            <th>
-                                Total
-                            </th>
-
-                            <th>
-                                Pembayaran
-                            </th>
-
-                            <th>
-                                Status
-                            </th>
-
-                            <th>
-                                Tanggal
-                            </th>
-
-                            <th>
-                                Aksi
-                            </th>
-
+                            <th>No. Transaksi</th>
+                            <th>Kasir</th>
+                            <th>Total</th>
+                            <th>Pembayaran</th>
+                            <th>Status</th>
+                            <th>Tanggal</th>
+                            <th>Aksi</th>
                         </tr>
-
                     </thead>
-
-
                     <tbody>
-
                         @forelse($transactions as $transaction)
-
                             @php
                                 $statusClass = '';
-
                                 if ($transaction->status === 'pending') {
                                     $statusClass = 'status-pending';
                                 }
-
-                                if (
-                                    $transaction->status === 'cancelled' ||
-                                    $transaction->status === 'canceled'
-                                ) {
+                                if ($transaction->status === 'cancelled' || $transaction->status === 'canceled') {
                                     $statusClass = 'status-cancelled';
                                 }
 
@@ -431,13 +380,10 @@
                                     'transfer' => 'Transfer',
                                 ];
 
-                                $paymentLabel =
-                                    $paymentLabels[$transaction->payment_method]
-                                    ?? ucfirst($transaction->payment_method);
+                                $paymentLabel = $paymentLabels[$transaction->payment_method] ?? ucfirst($transaction->payment_method);
                             @endphp
 
                             <tr>
-
                                 {{-- NOMOR TRANSAKSI --}}
                                 <td>
                                     <div class="invoice-number">
@@ -445,146 +391,84 @@
                                     </div>
                                 </td>
 
-
                                 {{-- KASIR --}}
                                 <td>
-
                                     <div class="cashier-name">
                                         {{ $transaction->user->name ?? 'Kasir' }}
                                     </div>
-
                                 </td>
-
 
                                 {{-- TOTAL --}}
                                 <td>
-
                                     <div class="total-price">
                                         Rp {{ number_format((float) $transaction->grand_total, 0, ',', '.') }}
                                     </div>
-
                                 </td>
-
 
                                 {{-- PEMBAYARAN --}}
                                 <td>
-
                                     <span class="payment-badge">
                                         {{ $paymentLabel }}
                                     </span>
-
                                 </td>
-
 
                                 {{-- STATUS --}}
                                 <td>
-
                                     <span class="status-badge {{ $statusClass }}">
                                         {{ ucfirst($transaction->status) }}
                                     </span>
-
                                 </td>
-
 
                                 {{-- TANGGAL --}}
                                 <td>
-
                                     <div class="transaction-date">
-
-                                        <strong>
-                                            {{ $transaction->created_at->format('d/m/Y') }}
-                                        </strong>
-
+                                        <strong>{{ $transaction->created_at->format('d/m/Y') }}</strong>
                                         {{ $transaction->created_at->format('H:i') }}
-
                                     </div>
-
                                 </td>
-
 
                                 {{-- AKSI --}}
                                 <td>
-
                                     <div class="action-buttons">
-
-                                        <a
-                                            href="{{ route('transactions.show', $transaction) }}"
-                                            class="btn-detail"
-                                        >
+                                        <a href="{{ route('transactions.show', $transaction) }}" class="btn-detail">
                                             Detail
                                         </a>
-
-                                        <a
-                                            href="{{ route('transactions.receipt', $transaction) }}"
-                                            class="btn-receipt"
-                                        >
+                                        <a href="{{ route('transactions.receipt', $transaction) }}" class="btn-receipt" target="_blank">
                                             Struk
                                         </a>
-
+                                        <a href="{{ route('orders.invoice', $transaction->id) }}" class="btn-pdf" target="_blank">
+                                            PDF
+                                        </a>
                                     </div>
-
                                 </td>
-
                             </tr>
-
                         @empty
-
                             <tr>
-
                                 <td colspan="7">
-
                                     <div class="empty-state">
-
-                                        <div class="empty-icon">
-                                            TRX
-                                        </div>
-
-                                        <h3 class="empty-title">
-                                            Belum ada transaksi
-                                        </h3>
-
-                                        <p class="empty-description">
-                                            Transaksi yang sudah selesai akan muncul di sini.
-                                        </p>
-
-                                        <a
-                                            href="{{ route('transactions.create') }}"
-                                            class="btn-new-transaction"
-                                            style="display:inline-flex;"
-                                        >
+                                        <div class="empty-icon">TRX</div>
+                                        <h3 class="empty-title">Belum ada transaksi</h3>
+                                        <p class="empty-description">Transaksi yang sudah selesai akan muncul di sini.</p>
+                                        <a href="{{ route('transactions.create') }}" class="btn-new-transaction" style="display:inline-flex;">
                                             + Buat Transaksi
                                         </a>
-
                                     </div>
-
                                 </td>
-
                             </tr>
-
                         @endforelse
-
                     </tbody>
-
                 </table>
-
             </div>
-
 
             {{-- PAGINATION --}}
             @if($transactions->hasPages())
-
                 <div class="pagination-wrapper">
-
                     {{ $transactions->links() }}
-
                 </div>
-
             @endif
-
         </div>
 
     </div>
-
 </div>
 
 @endsection

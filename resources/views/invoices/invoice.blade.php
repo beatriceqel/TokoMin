@@ -5,9 +5,8 @@
     <style>
         body { font-family: Arial, sans-serif; }
         .header { text-align: center; }
-        .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .table th, .table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        .table th { background-color: #f2f2f2; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { border: 1px solid #ccc; padding: 8px; }
         .total { font-weight: bold; text-align: right; }
     </style>
 </head>
@@ -17,7 +16,7 @@
         <p>No: {{ $invoice->id }}</p>
         <p>Tanggal: {{ $invoice->created_at->format('d/m/Y') }}</p>
     </div>
-
+    
     <table class="table">
         <thead>
             <tr>

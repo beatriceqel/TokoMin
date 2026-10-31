@@ -13,11 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',       // <-- Routing API terdaftar
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php', // <-- DITAMBAHKAN AGAR BROADCAST AUTH BERFUNGSI
         health: '/up',
-        apiPrefix: '/api',                      // <-- Prefix URL /api
+        apiPrefix: '/api',                          // <-- Prefix URL /api
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Pendaftaran Middleware Group untuk API (Sanctum & Throttle)[cite: 24, 25]
+        // Pendaftaran Middleware Group untuk API (Sanctum & Throttle)
         $middleware->appendToGroup('api', [
             EnsureFrontendRequestsAreStateful::class,
             'throttle:api',

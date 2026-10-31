@@ -9,6 +9,7 @@
     <x-slot:actions>
         <a class="workspace-button workspace-button-light" href="{{ route('transactions.index') }}">Kembali</a>
         <a class="workspace-button workspace-button-primary" href="{{ route('transactions.receipt', $transaction) }}" target="_blank" rel="noopener">Cetak struk</a>
+        <a class="workspace-button" style="background-color: #059669; color: white;" href="{{ route('orders.invoice', $transaction->id) }}" target="_blank" rel="noopener">Unduh Invoice PDF</a>
     </x-slot:actions>
 
     <section class="workspace-card workspace-transaction-summary">

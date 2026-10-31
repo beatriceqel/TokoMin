@@ -47,7 +47,7 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048', // Validasi file gambar maksimal 2MB
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'is_active' => 'nullable|boolean',
         ]);
 
@@ -149,7 +149,7 @@ class ProductController extends Controller
             Storage::disk('public')->put($path, $encoded->toString());
             $validated['image'] = $path;
         } else {
-            // Pertahankan gambar lama jika tidak ada upload baru
+            // Pertahankan gambar lama jika tidak mengunggah gambar baru
             unset($validated['image']);
         }
 

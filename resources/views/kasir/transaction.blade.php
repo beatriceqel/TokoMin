@@ -78,7 +78,7 @@
                         >
                             <div class="pos-product-image">
                                 @if($product->image)
-                                    <img src="{{ asset('images/products/' . $product->image) }}" alt="{{ $product->name }}" loading="lazy">
+                                    <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" loading="lazy">
                                 @else
                                     <span aria-hidden="true">📦</span>
                                 @endif
@@ -203,4 +203,215 @@
         </form>
     </div>
 </section>
+
+<!-- MODAL POPUP STRUK / NOTIFIKASI REAL-TIME -->
+<div id="receiptModal" class="pos-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="pos-modal-content" style="background: white; padding: 24px; border-radius: 8px; width: 420px; max-width: 90%;">
+        <h3 style="margin-bottom: 12px; font-weight: bold; font-size: 18px;">Pembayaran Berhasil</h3>
+        <div id="receiptDetails" style="margin-bottom: 16px; font-size: 14px; background: #f9f9f9; padding: 12px; border-radius: 4px;">
+            <!-- Info struk dimuat via JS -->
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+            <button type="button" id="closeModalBtn" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Tutup</button>
+            <a href="#" id="printReceiptBtn" target="_blank" style="padding: 8px 16px; background: #2563eb; color: white; text-decoration: none; border-radius: 4px; display: inline-block;">Cetak Struk</a>
+            <a href="#" id="downloadPdfBtn" target="_blank" style="padding: 8px 16px; background: #059669; color: white; text-decoration: none; border-radius: 4px; display: inline-block;">Unduh Invoice PDF</a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    let cart = [];
+
+    function updateCartUI() {
+        const cartBody = document.getElementById('cartBody');
+        const emptyCart = document.getElementById('emptyCart');
+        const cartCount = document.getElementById('cartCount');
+        const subtotalText = document.getElementById('subtotalText');
+        const grandTotalText = document.getElementById('grandTotalText');
+        const hiddenCartInputs = document.getElementById('hiddenCartInputs');
+
+        cartBody.innerHTML = '';
+        hiddenCartInputs.innerHTML = '';
+
+        if (cart.length === 0) {
+            emptyCart.style.display = 'block';
+            cartCount.textContent = '0 item';
+            subtotalText.textContent = 'Rp 0';
+            grandTotalText.textContent = 'Rp 0';
+            return;
+        }
+
+        emptyCart.style.display = 'none';
+        let totalItems = 0;
+        let subtotal = 0;
+
+        cart.forEach((item, index) => {
+            totalItems += item.qty;
+            let itemSubtotal = item.price * item.qty;
+            subtotal += itemSubtotal;
+
+            cartBody.innerHTML += `
+                <div class="pos-cart-item" style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center;">
+                    <div>
+                        <strong>${item.name}</strong><br>
+                        <small>Rp ${item.price.toLocaleString()} x ${item.qty}</small>
+                    </div>
+                    <div>
+                        <span>Rp ${itemSubtotal.toLocaleString()}</span>
+                        <button type="button" class="remove-item" data-index="${index}" style="color:red; margin-left:8px; border:none; background:none; cursor:pointer;">×</button>
+                    </div>
+                </div>
+            `;
+
+            hiddenCartInputs.innerHTML += `
+                <input type="hidden" name="items[${index}][product_id]" value="${item.id}">
+                <input type="hidden" name="items[${index}][qty]" value="${item.qty}">
+            `;
+        });
+
+        cartCount.textContent = `${totalItems} item`;
+        subtotalText.textContent = `Rp ${subtotal.toLocaleString()}`;
+
+        let discount = parseFloat(document.getElementById('discount').value) || 0;
+        let tax = parseFloat(document.getElementById('tax').value) || 0;
+        let otherFee = parseFloat(document.getElementById('other_fee').value) || 0;
+
+        let grandTotal = subtotal - discount + tax + otherFee;
+        if (grandTotal < 0) grandTotal = 0;
+
+        grandTotalText.textContent = `Rp ${grandTotal.toLocaleString()}`;
+
+        let paidAmount = parseFloat(document.getElementById('paid_amount').value) || 0;
+        let change = paidAmount - grandTotal;
+        document.getElementById('changeText').textContent = `Rp ${change >= 0 ? change.toLocaleString() : 0}`;
+    }
+
+    document.querySelectorAll('.add-product-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            let id = parseInt(this.dataset.id);
+            let name = this.dataset.name;
+            let price = parseFloat(this.dataset.price);
+            let stock = parseInt(this.dataset.stock);
+
+            let existingItem = cart.find(item => item.id === id);
+            if (existingItem) {
+                if (existingItem.qty < stock) {
+                    existingItem.qty++;
+                } else {
+                    alert('Stok produk tidak mencukupi!');
+                }
+            } else {
+                if (stock > 0) {
+                    cart.push({ id, name, price, qty: 1, stock });
+                } else {
+                    alert('Stok produk habis!');
+                }
+            }
+            updateCartUI();
+        });
+    });
+
+    document.getElementById('cartBody').addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-item')) {
+            let index = e.target.dataset.index;
+            cart.splice(index, 1);
+            updateCartUI();
+        }
+    });
+
+    ['discount', 'tax', 'other_fee', 'paid_amount'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateCartUI);
+    });
+
+    document.getElementById('clearCart').addEventListener('click', function() {
+        cart = [];
+        updateCartUI();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        cart = [];
+        document.getElementById('transactionForm').reset();
+        updateCartUI();
+    });
+
+    const form = document.getElementById('transactionForm');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (cart.length === 0) {
+            alert('Keranjang masih kosong!');
+            return;
+        }
+
+        let formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Tampilkan Modal secara manual jika response sukses via AJAX
+            const trx = data.transaction;
+            const modal = document.getElementById('receiptModal');
+            const details = document.getElementById('receiptDetails');
+            const printBtn = document.getElementById('printReceiptBtn');
+            const pdfBtn = document.getElementById('downloadPdfBtn');
+
+            details.innerHTML = `
+                <strong>No. Transaksi:</strong> ${trx.transaction_number}<br>
+                <strong>Total:</strong> Rp ${Number(trx.grand_total).toLocaleString()}<br>
+                <strong>Metode:</strong> ${trx.payment_method.toUpperCase()}
+            `;
+            printBtn.href = `/transactions/${trx.id}/receipt`;
+            pdfBtn.href = `/orders/${trx.id}/invoice`; // Rute DomPDF Acara 30
+            modal.style.display = 'flex';
+
+            cart = [];
+            updateCartUI();
+            form.reset();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(error.message || 'Terjadi kesalahan saat memproses transaksi.');
+        });
+    });
+
+    @auth
+    if (typeof window.Echo !== 'undefined') {
+        window.Echo.private('user.{{ auth()->id() }}')
+            .listen('.order.placed', (e) => {
+                const modal = document.getElementById('receiptModal');
+                const details = document.getElementById('receiptDetails');
+                const printBtn = document.getElementById('printReceiptBtn');
+                const pdfBtn = document.getElementById('downloadPdfBtn');
+
+                details.innerHTML = `
+                    <strong>No. Transaksi:</strong> ${e.order_id}<br>
+                    <strong>Total:</strong> Rp ${Number(e.total).toLocaleString()}<br>
+                    <strong>Kasir:</strong> ${e.user_name}
+                `;
+                printBtn.href = `/transactions/${e.order_id}/receipt`;
+                pdfBtn.href = `/orders/${e.order_id}/invoice`; // Rute DomPDF Acara 30
+                modal.style.display = 'flex';
+            });
+    }
+    @endauth
+
+    document.getElementById('closeModalBtn').addEventListener('click', function() {
+        document.getElementById('receiptModal').style.display = 'none';
+        location.reload();
+    });
+});
+</script>
 @endsection

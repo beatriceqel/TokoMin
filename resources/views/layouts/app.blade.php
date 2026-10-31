@@ -20,7 +20,6 @@
 
 </head>
 
-
 <body class="font-sans antialiased">
 
     <div class="min-h-screen">
@@ -43,6 +42,25 @@
         </main>
 
     </div>
+
+    {{-- =============================== --}}
+    {{-- REAL-TIME NOTIFICATION LISTENER --}}
+    {{-- =============================== --}}
+    @auth
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            if (typeof window.Echo !== 'undefined') {
+                window.Echo.private('user.{{ auth()->id() }}')
+                    .listen('.order.placed', (e) => {
+                        alert(`Order #${e.order_id} telah ditempatkan! Total: Rp ${e.total}`);
+                        console.log('Order Placed:', e);
+                    });
+            } else {
+                console.error('Laravel Echo belum terinisialisasi!');
+            }
+        });
+    </script>
+    @endauth
 
 </body>
 
