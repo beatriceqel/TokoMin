@@ -10,6 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
+// Library Mike42 ESC/POS untuk pencetakan thermal otomatis (Acara 35 & 36)
+use Mike42\Escpos\Printer;
+use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
+use Exception;
 
 class TransactionController extends Controller
 {
@@ -46,7 +50,7 @@ class TransactionController extends Controller
     }
 
     /**
-     * Menyimpan transaksi baru.
+     * Menyimpan transaksi baru dan mencetak struk otomatis ke printer thermal.
      */
     public function store(Request $request)
     {
@@ -203,11 +207,14 @@ class TransactionController extends Controller
             return $trx;
         });
 
+        // PANGGIL FUNGSI CETAK STRUK OTOMATIS KE PRINTER THERMAL (ACARA 36)
+        $this->printThermalReceipt($transaction);
+
         // Cek apakah request berasal dari AJAX/Fetch
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Transaksi berhasil disimpan.',
+                'message' => 'Transaksi berhasil disimpan dan struk dicetak otomatis.',
                 'transaction' => $transaction
             ]);
         }
@@ -215,6 +222,71 @@ class TransactionController extends Controller
         return redirect()
             ->route('transactions.receipt', $transaction)
             ->with('success', 'Transaksi berhasil disimpan.');
+    }
+
+    /**
+     * Fungsi helper untuk mencetak struk otomatis menggunakan Mike42 ESC/POS.
+     */
+    private function printThermalReceipt($transaction)
+    {
+        try {
+            // Load relasi data yang dibutuhkan
+            $transaction->load(['details', 'user']);
+
+            // Sesuaikan nama printer thermal Anda yang sudah di-share di Windows
+            $connector = new WindowsPrintConnector("POS80 Printer");
+            $printer = new Printer($connector);
+            
+            // Header Struk TokoMini
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->text("TokoMini\n");
+            $printer->text("Sabu Raijua - Nusa Tenggara Timur\n");
+            $printer->text("--------------------------------\n");
+            
+            // Informasi Transaksi
+            $printer->setJustification(Printer::JUSTIFY_LEFT);
+            $printer->text("No. TRX   : " . $transaction->transaction_number . "\n");
+            $printer->text("Tanggal   : " . $transaction->created_at . "\n");
+            $printer->text("Kasir     : " . ($transaction->user->name ?? 'Kasir') . "\n");
+            $printer->text("--------------------------------\n");
+            
+            // Daftar Barang / Items
+            foreach ($transaction->details as $item) {
+                $printer->text($item->product_name . "\n");
+                $printer->text($item->qty . " x Rp " . number_format($item->price, 0, ',', '.') . "   Rp " . number_format($item->subtotal, 0, ',', '.') . "\n");
+            }
+            
+            $printer->text("--------------------------------\n");
+            
+            // Total & Pembayaran
+            $printer->text("Subtotal  : Rp " . number_format((float)($transaction->subtotal ?? 0), 0, ',', '.') . "\n");
+            if ($transaction->discount > 0) {
+                $printer->text("Diskon    : Rp " . number_format((float)($transaction->discount ?? 0), 0, ',', '.') . "\n");
+            }
+            if ($transaction->tax > 0) {
+                $printer->text("Pajak     : Rp " . number_format((float)($transaction->tax ?? 0), 0, ',', '.') . "\n");
+            }
+            if ($transaction->other_fee > 0) {
+                $printer->text("Biaya Lain: Rp " . number_format((float)($transaction->other_fee ?? 0), 0, ',', '.') . "\n");
+            }
+            $printer->text("TOTAL     : Rp " . number_format((float)($transaction->grand_total ?? 0), 0, ',', '.') . "\n");
+            $printer->text("Bayar     : Rp " . number_format((float)($transaction->paid_amount ?? 0), 0, ',', '.') . "\n");
+            $printer->text("Kembalian : Rp " . number_format((float)($transaction->change_amount ?? 0), 0, ',', '.') . "\n");
+            $printer->text("--------------------------------\n");
+            
+            // Footer
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->text("Transaksi Berhasil!\n");
+            $printer->text("Terima kasih telah berbelanja.\n");
+            $printer->text("Semoga hari Anda menyenangkan.\n\n");
+            
+            $printer->cut();
+            $printer->close();
+
+        } catch (Exception $e) {
+            // Catat ke log jika printer offline/tidak terjangkau
+            \Log::error("Gagal mencetak struk thermal otomatis: " . $e->getMessage());
+        }
     }
 
     /**
@@ -253,31 +325,31 @@ class TransactionController extends Controller
      * Mencetak dan mengunduh invoice PDF.
      */
     public function invoice($id)
-{
-    $transaction = Transaction::with('details.product', 'user')->findOrFail($id);
+    {
+        $transaction = Transaction::with('details.product', 'user')->findOrFail($id);
 
-    $invoice = new \stdClass();
-    $invoice->id = $transaction->id;
-    $invoice->transaction_number = $transaction->transaction_number ?? '-';
-    $invoice->created_at = $transaction->created_at ?? now(); 
-    $invoice->user = $transaction->user;
-    $invoice->payment_method = $transaction->payment_method;
-    $invoice->subtotal = $transaction->subtotal;
-    $invoice->discount = $transaction->discount;
-    $invoice->tax = $transaction->tax;
-    $invoice->other_fee = $transaction->other_fee;
-    $invoice->paid_amount = $transaction->paid_amount;
-    $invoice->change_amount = $transaction->change_amount;
+        $invoice = new \stdClass();
+        $invoice->id = $transaction->id;
+        $invoice->transaction_number = $transaction->transaction_number ?? '-';
+        $invoice->created_at = $transaction->created_at ?? now(); 
+        $invoice->user = $transaction->user;
+        $invoice->payment_method = $transaction->payment_method;
+        $invoice->subtotal = $transaction->subtotal;
+        $invoice->discount = $transaction->discount;
+        $invoice->tax = $transaction->tax;
+        $invoice->other_fee = $transaction->other_fee;
+        $invoice->paid_amount = $transaction->paid_amount;
+        $invoice->change_amount = $transaction->change_amount;
 
-    $invoice->items = $transaction->details->map(function ($item) {
-        $item->quantity = $item->qty; 
-        $item->total = $item->subtotal ?? ($item->price * $item->qty);
-        return $item;
-    });
+        $invoice->items = $transaction->details->map(function ($item) {
+            $item->quantity = $item->qty; 
+            $item->total = $item->subtotal ?? ($item->price * $item->qty);
+            return $item;
+        });
 
-    $invoice->total = $transaction->grand_total ?? 0;
+        $invoice->total = $transaction->grand_total ?? 0;
 
-    $pdf = Pdf::loadView('invoices.invoice', compact('invoice'));
-    return $pdf->download('invoice_' . $invoice->id . '.pdf');
+        $pdf = Pdf::loadView('invoices.invoice', compact('invoice'));
+        return $pdf->download('invoice_' . $invoice->id . '.pdf');
     }
 }
