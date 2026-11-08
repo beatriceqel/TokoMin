@@ -8,6 +8,8 @@ use App\Models\Transaction;
 use App\Events\OrderPlaced; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
 // Library Mike42 ESC/POS untuk pencetakan thermal otomatis (Acara 35 & 36)
@@ -50,7 +52,8 @@ class TransactionController extends Controller
     }
 
     /**
-     * Menyimpan transaksi baru dan mencetak struk otomatis ke printer thermal.
+     * Menyimpan transaksi baru. 
+     * Jika tunai langsung completed, jika non-tunai statusnya pending.
      */
     public function store(Request $request)
     {
@@ -104,13 +107,15 @@ class TransactionController extends Controller
         $tax = (float) ($validated['tax'] ?? 0);
         $otherFee = (float) ($validated['other_fee'] ?? 0);
         $paidAmount = (float) $validated['paid_amount'];
+        $paymentMethod = $validated['payment_method'];
 
         $transaction = DB::transaction(function () use (
             $validated,
             $discount,
             $tax,
             $otherFee,
-            $paidAmount
+            $paidAmount,
+            $paymentMethod
         ) {
             $productIds = collect($validated['items'])
                 ->pluck('product_id')
@@ -158,6 +163,10 @@ class TransactionController extends Controller
                 $grandTotal = 0;
             }
 
+            if ($paymentMethod !== 'tunai') { 
+                $paidAmount = $grandTotal;
+            }
+            
             if ($paidAmount < $grandTotal) {
                 abort(422, 'Uang pembayaran tidak mencukupi.');
             }
@@ -165,6 +174,9 @@ class TransactionController extends Controller
             $changeAmount = $paidAmount - $grandTotal;
 
             $transactionNumber = 'TRX-' . now()->format('YmdHis') . '-' . strtoupper(Str::random(4));
+
+            // Status: 'completed' jika tunai, 'pending' jika non-tunai (menunggu pembayaran Midtrans)
+            $status = ($paymentMethod === 'tunai') ? 'completed' : 'pending';
 
             $trx = Transaction::create([
                 'transaction_number' => $transactionNumber,
@@ -177,8 +189,8 @@ class TransactionController extends Controller
                 'grand_total' => $grandTotal,
                 'paid_amount' => $paidAmount,
                 'change_amount' => $changeAmount,
-                'payment_method' => $validated['payment_method'],
-                'status' => 'completed',
+                'payment_method' => $paymentMethod,
+                'status' => $status,
             ]);
 
             foreach ($validated['items'] as $item) {
@@ -198,23 +210,30 @@ class TransactionController extends Controller
                     'subtotal' => $itemSubtotal,
                 ]);
 
-                $product->decrement('stock', $qty);
+                // Stok hanya dikurangi langsung jika pembayaran TUNAI
+                if ($paymentMethod === 'tunai') {
+                    $product->decrement('stock', $qty);
+                }
             }
 
-            // TRIGGER BROADCAST EVENT (LARAVEL REVERB)
-            event(new OrderPlaced($trx, auth()->user()));
+            // TRIGGER BROADCAST EVENT HANYA JIKA TUNAI
+            if ($paymentMethod === 'tunai') {
+                event(new OrderPlaced($trx, auth()->user()));
+            }
 
             return $trx;
         });
 
-        // PANGGIL FUNGSI CETAK STRUK OTOMATIS KE PRINTER THERMAL (ACARA 36)
-        $this->printThermalReceipt($transaction);
+        // Cetak struk otomatis hanya jika TUNAI
+        if ($transaction->status === 'completed') {
+            $this->printThermalReceipt($transaction);
+        }
 
         // Cek apakah request berasal dari AJAX/Fetch
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Transaksi berhasil disimpan dan struk dicetak otomatis.',
+                'message' => 'Transaksi berhasil dibuat.',
                 'transaction' => $transaction
             ]);
         }
@@ -222,6 +241,97 @@ class TransactionController extends Controller
         return redirect()
             ->route('transactions.receipt', $transaction)
             ->with('success', 'Transaksi berhasil disimpan.');
+    }
+
+    /**
+     * Mengubah status transaksi menjadi completed (lunas) setelah pembayaran Midtrans sukses.
+     */
+    public function markAsPaid($id)
+    {
+        $transaction = Transaction::with('details.product')->findOrFail($id);
+
+        if ($transaction->status === 'completed') {
+            return response()->json(['success' => true]);
+        }
+
+        DB::transaction(function () use ($transaction) {
+            $transaction->update(['status' => 'completed']);
+
+            // Kurangi stok produk setelah pembayaran berhasil dikonfirmasi
+            foreach ($transaction->details as $item) {
+                if ($item->product) {
+                    $item->product->decrement('stock', $item->qty);
+                }
+            }
+        });
+
+        // Cetak struk otomatis dan trigger broadcast setelah benar-benar lunas
+        $this->printThermalReceipt($transaction);
+        event(new OrderPlaced($transaction, $transaction->user));
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Pembayaran berhasil dikonfirmasi dan lunas.'
+        ]);
+    }
+
+    /**
+     * Memproses pembayaran menggunakan Midtrans Snap API via HTTP Client Laravel.
+     */
+    public function payWithMidtrans(Transaction $transaction)
+    {
+        $serverKey = 'SB-Mid-server-jtrBluA7V7Mph5ouw4~4X1-u';
+        $baseUrl = 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+
+        $orderIdForMidtrans = 'TOKOMINI-' . $transaction->id . '-' . time();
+        $params = [
+            'transaction_details' => [
+                'order_id' => $orderIdForMidtrans,
+                'gross_amount' => (int) $transaction->grand_total,
+            ],
+            'customer_details' => [
+                'first_name' => auth()->user()->name ?? 'Kasir TokoMini',
+                'email' => auth()->user()->email ?? 'kasir@tokomini.test',
+            ],
+        ];
+
+        try {
+            $authCredentials = base64_encode($serverKey . ':');
+            $response = Http::withHeaders([
+                'Authorization' => 'Basic ' . $authCredentials,
+                'Accept'        => 'application/json',
+                'Content-Type'  => 'application/json',
+            ])
+            ->withOptions(['verify' => false])
+            ->post($baseUrl, $params);
+            $responseData = $response->json();
+            if ($response->successful() && isset($responseData['token'])) {
+                return response()->json([
+                    'success' => true,
+                    'snapToken' => $responseData['token'],
+                    'transaction' => $transaction
+                ]);
+            } else {
+                Log::error('Midtrans HTTP Error Response:', [
+                    'status' => $response->status(),
+                    'body' => $responseData ?? $response->body()
+                ]);
+
+                $errorMessage = isset($responseData['error_messages'][0]) 
+                    ? $responseData['error_messages'][0] 
+                    : ('Gagal dari Midtrans: ' . json_encode($responseData));
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage
+                ], 500);
+            }
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Midtrans Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -237,9 +347,9 @@ class TransactionController extends Controller
             $connector = new WindowsPrintConnector("POS80 Printer");
             $printer = new Printer($connector);
             
-            // Header Struk TokoMini
+            // Header Struk TokoLokal
             $printer->setJustification(Printer::JUSTIFY_CENTER);
-            $printer->text("TokoMini\n");
+            $printer->text("TokoLokal\n");
             $printer->text("Sabu Raijua - Nusa Tenggara Timur\n");
             $printer->text("--------------------------------\n");
             
@@ -285,7 +395,7 @@ class TransactionController extends Controller
 
         } catch (Exception $e) {
             // Catat ke log jika printer offline/tidak terjangkau
-            \Log::error("Gagal mencetak struk thermal otomatis: " . $e->getMessage());
+            Log::error("Gagal mencetak struk thermal otomatis: " . $e->getMessage());
         }
     }
 

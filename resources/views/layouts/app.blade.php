@@ -18,6 +18,9 @@
         'resources/js/app.js'
     ])
 
+    <!-- Script Midtrans Snap Sandbox -->
+    <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ config('midtrans.clientKey') }}"></script>
+
 </head>
 
 <body class="font-sans antialiased">

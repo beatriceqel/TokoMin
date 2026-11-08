@@ -10,9 +10,9 @@
                 <p class="pos-subtitle">Pilih produk, atur pembayaran, lalu selesaikan transaksi.</p>
             </div>
             <div class="pos-user-card">
-                <span class="pos-user-mark" aria-hidden="true">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                <span class="pos-user-mark" aria-hidden="true">{{ auth()->check() ? strtoupper(substr(auth()->user()->name, 0, 1)) : 'K' }}</span>
                 <span>
-                    <strong>{{ auth()->user()->name }}</strong>
+                    <strong>{{ auth()->user()->name ?? 'Kasir' }}</strong>
                     <small id="currentDateTime"></small>
                 </span>
             </div>
@@ -60,8 +60,10 @@
                         <span class="sr-only">Filter kategori</span>
                         <select id="categoryFilter">
                             <option value="">Semua kategori</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->name }}">{{ $category->name }}</option>
+                            @foreach($categories ?? [] as $category)
+                                @if(is_object($category))
+                                    <option value="{{ $category->name }}">{{ $category->name }}</option>
+                                @endif
                             @endforeach
                         </select>
                     </label>
@@ -182,7 +184,7 @@
 
                     <label class="pos-field" for="paid_amount">
                         <span>Uang dibayar</span>
-                        <span class="pos-payment-input"><span>Rp</span><input id="paid_amount" name="paid_amount" type="number" min="0" step="1" placeholder="0" required></span>
+                        <span class="pos-payment-input"><span>Rp</span><input id="paid_amount" name="paid_amount" type="number" min="0" step="1" placeholder="0"></span>
                     </label>
 
                     <div class="pos-change">
@@ -204,13 +206,11 @@
     </div>
 </section>
 
-<!-- MODAL POPUP STRUK / NOTIFIKASI REAL-TIME -->
+<!-- MODAL POPUP STRUK / NOTIFIKASI -->
 <div id="receiptModal" class="pos-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
     <div class="pos-modal-content" style="background: white; padding: 24px; border-radius: 8px; width: 420px; max-width: 90%;">
         <h3 style="margin-bottom: 12px; font-weight: bold; font-size: 18px;">Pembayaran Berhasil</h3>
-        <div id="receiptDetails" style="margin-bottom: 16px; font-size: 14px; background: #f9f9f9; padding: 12px; border-radius: 4px;">
-            <!-- Info struk dimuat via JS -->
-        </div>
+        <div id="receiptDetails" style="margin-bottom: 16px; font-size: 14px; background: #f9f9f9; padding: 12px; border-radius: 4px;"></div>
         <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
             <button type="button" id="closeModalBtn" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Tutup</button>
             <a href="#" id="printReceiptBtn" target="_blank" style="padding: 8px 16px; background: #2563eb; color: white; text-decoration: none; border-radius: 4px; display: inline-block;">Cetak Struk</a>
@@ -218,6 +218,9 @@
         </div>
     </div>
 </div>
+
+<!-- SCRIPTS MIDTRANS SNAP -->
+<script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ config('midtrans.clientKey') }}"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
@@ -230,6 +233,8 @@ document.addEventListener("DOMContentLoaded", function() {
         const subtotalText = document.getElementById('subtotalText');
         const grandTotalText = document.getElementById('grandTotalText');
         const hiddenCartInputs = document.getElementById('hiddenCartInputs');
+        const paymentMethod = document.getElementById('payment_method').value;
+        const paidInput = document.getElementById('paid_amount');
 
         cartBody.innerHTML = '';
         hiddenCartInputs.innerHTML = '';
@@ -282,10 +287,19 @@ document.addEventListener("DOMContentLoaded", function() {
 
         grandTotalText.textContent = `Rp ${grandTotal.toLocaleString()}`;
 
-        let paidAmount = parseFloat(document.getElementById('paid_amount').value) || 0;
+        if (paymentMethod !== 'tunai') {
+            paidInput.value = grandTotal;
+            paidInput.readOnly = true;
+        } else {
+            paidInput.readOnly = false;
+        }
+
+        let paidAmount = parseFloat(paidInput.value) || 0;
         let change = paidAmount - grandTotal;
         document.getElementById('changeText').textContent = `Rp ${change >= 0 ? change.toLocaleString() : 0}`;
     }
+
+    document.getElementById('payment_method').addEventListener('change', updateCartUI);
 
     document.querySelectorAll('.add-product-btn').forEach(button => {
         button.addEventListener('click', function() {
@@ -344,6 +358,7 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
+        let paymentMethod = document.getElementById('payment_method').value;
         let formData = new FormData(form);
 
         fetch(form.action, {
@@ -361,52 +376,89 @@ document.addEventListener("DOMContentLoaded", function() {
             return response.json();
         })
         .then(data => {
-            // Tampilkan Modal secara manual jika response sukses via AJAX
             const trx = data.transaction;
-            const modal = document.getElementById('receiptModal');
-            const details = document.getElementById('receiptDetails');
-            const printBtn = document.getElementById('printReceiptBtn');
-            const pdfBtn = document.getElementById('downloadPdfBtn');
 
-            details.innerHTML = `
-                <strong>No. Transaksi:</strong> ${trx.transaction_number}<br>
-                <strong>Total:</strong> Rp ${Number(trx.grand_total).toLocaleString()}<br>
-                <strong>Metode:</strong> ${trx.payment_method.toUpperCase()}
-            `;
-            printBtn.href = `/transactions/${trx.id}/receipt`;
-            pdfBtn.href = `/orders/${trx.id}/invoice`; // Rute DomPDF Acara 30
-            modal.style.display = 'flex';
-
-            cart = [];
-            updateCartUI();
-            form.reset();
+            if (paymentMethod === 'tunai') {
+                showReceiptModal(trx);
+            } else {
+                fetch(`/transactions/${trx.id}/pay-midtrans`, {
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                })
+                .then(res => res.json())
+                .then(midtransData => {
+                    if (midtransData.success) {
+                        window.snap.pay(midtransData.snapToken, {
+                            onSuccess: function(result){
+                                fetch(`/transactions/${trx.id}/mark-as-paid`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                        'Accept': 'application/json',
+                                    }
+                                })
+                                .then(res => res.json())
+                                .then(paidData => {
+                                    if (paidData.success) {
+                                        alert("Pembayaran Midtrans Berhasil & Terkonfirmasi!");
+                                        showReceiptModal(trx);
+                                    } else {
+                                        alert("Gagal memperbarui status transaksi.");
+                                    }
+                                });
+                            },
+                            onPending: function(result){
+                                alert("Menunggu pembayaran Anda diselesaikan.");
+                                location.reload();
+                            },
+                            onError: function(result){
+                                alert("Pembayaran gagal!");
+                                console.log(result);
+                            },
+                            onClose: function(){
+                                console.log("Popup ditutup tanpa menyelesaikan pembayaran.");
+                            }
+                        });
+                    } else {
+                        alert("Gagal mendapatkan Snap Token: " + midtransData.message);
+                    }
+                })
+                .catch(err => {
+                    console.error('Midtrans Error:', err);
+                    alert('Terjadi kesalahan saat menghubungkan ke Midtrans.');
+                });
+            }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert(error.message || 'Terjadi kesalahan saat memproses transaksi.');
+            let msg = error.message || 'Terjadi kesalahan saat memproses transaksi.';
+            if (error.errors) {
+                msg = Object.values(error.errors).flat().join('\n');
+            }
+            alert(msg);
         });
     });
 
-    @auth
-    if (typeof window.Echo !== 'undefined') {
-        window.Echo.private('user.{{ auth()->id() }}')
-            .listen('.order.placed', (e) => {
-                const modal = document.getElementById('receiptModal');
-                const details = document.getElementById('receiptDetails');
-                const printBtn = document.getElementById('printReceiptBtn');
-                const pdfBtn = document.getElementById('downloadPdfBtn');
+    function showReceiptModal(trx) {
+        const modal = document.getElementById('receiptModal');
+        const details = document.getElementById('receiptDetails');
+        const printBtn = document.getElementById('printReceiptBtn');
+        const pdfBtn = document.getElementById('downloadPdfBtn');
 
-                details.innerHTML = `
-                    <strong>No. Transaksi:</strong> ${e.order_id}<br>
-                    <strong>Total:</strong> Rp ${Number(e.total).toLocaleString()}<br>
-                    <strong>Kasir:</strong> ${e.user_name}
-                `;
-                printBtn.href = `/transactions/${e.order_id}/receipt`;
-                pdfBtn.href = `/orders/${e.order_id}/invoice`; // Rute DomPDF Acara 30
-                modal.style.display = 'flex';
-            });
+        details.innerHTML = `
+            <strong>No. Transaksi:</strong> ${trx.transaction_number}<br>
+            <strong>Total:</strong> Rp ${Number(trx.grand_total).toLocaleString()}<br>
+            <strong>Metode:</strong> ${trx.payment_method.toUpperCase()}
+        `;
+        printBtn.href = `/transactions/${trx.id}/receipt`;
+        pdfBtn.href = `/orders/${trx.id}/invoice`;
+        modal.style.display = 'flex';
+
+        cart = [];
+        updateCartUI();
+        document.getElementById('transactionForm').reset();
     }
-    @endauth
 
     document.getElementById('closeModalBtn').addEventListener('click', function() {
         document.getElementById('receiptModal').style.display = 'none';

@@ -13,6 +13,7 @@ use App\Http\Controllers\ReceiptController;
 Route::get('/', function () {
     return view('welcome');
 });
+
 Route::middleware(['auth'])->group(function () {
     // Route khusus Admin
     Route::middleware(['role:admin'])->group(function () {
@@ -22,6 +23,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('products', ProductController::class);
         Route::resource('categories', CategoryController::class)->except('show', 'create', 'edit');
     });
+
     // Route untuk Admin dan Kasir
     Route::middleware(['role:admin,kasir'])->group(function () {
         Route::get('/transactions', [TransactionController::class, 'index'])
@@ -34,22 +36,35 @@ Route::middleware(['auth'])->group(function () {
             ->name('transactions.show');
         Route::get('/transactions/{transaction}/receipt', [TransactionController::class, 'receipt'])
             ->name('transactions.receipt');
+        
+        // Rute Integrasi Midtrans
+        Route::get('/transactions/{transaction}/pay-midtrans', [TransactionController::class, 'payWithMidtrans'])
+            ->name('transactions.pay-midtrans');
+
+        // Rute Konfirmasi Pelunasan Pembayaran Midtrans (BARU)
+        Route::post('/transactions/{transaction}/mark-as-paid', [TransactionController::class, 'markAsPaid'])
+            ->name('transactions.mark-as-paid');
+
         // File Upload 
         Route::get('/upload', [FileController::class, 'showForm'])->name('file.form');
         Route::post('/upload', [FileController::class, 'upload'])->name('file.upload');
+        
         // --- RUTE INVOICE PDF (Acara 30) ---
         Route::get('orders/{id}/invoice', [TransactionController::class, 'invoice'])->name('orders.invoice');
         
         Route::get('/transactions/{id}/receipt-escpos', [ReceiptController::class, 'print']);
     });
+
     // Route khusus Kasir
     Route::middleware(['role:kasir'])->group(function () {
         Route::get('/kasir/dashboard', [KasirController::class, 'dashboard'])
             ->name('kasir.dashboard');
     });
 });
+
 // --- RUTE BROADCAST AUTHENTICATION (LARAVEL REVERB) ---
 Broadcast::channel('user.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
+
 require __DIR__ . '/auth.php';
